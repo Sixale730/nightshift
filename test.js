@@ -36,9 +36,13 @@ const POLICY_CASES = [
   ['git stash typecheck round-trip',
     'cd c:/maity && git stash -q && cd packages/shared && npx tsc --noEmit 2>&1 | grep -c "error TS"; cd c:/maity && git stash pop -q && echo "stash restored"', 'allow'],
   ['npx whitelisted tool', 'npx vitest run --reporter=dot', 'allow'],
+  ['pipe inside quoted pattern',
+    'Set-Location c:\\FEM\\app; flutter analyze --no-fatal-infos 2>&1 | Select-String -Pattern "warning -|issues found"', 'allow'],
+  ['semicolon inside quoted string', "echo 'a;b' | sort", 'allow'],
 
   ['hidden destructive tail', 'git status && rm -rf build', 'deny'],
   ['Set-Location + destructive tail', 'Set-Location c:\\x; Remove-Item y -Recurse', 'deny'],
+  ['quoted pipe + destructive tail', 'grep "a|b" f.txt && rm -rf build', 'deny'],
   ['git push in a chain', 'git commit -m "wip" && git push origin main', 'deny'],
   ['force flag', 'git checkout main --force', 'deny'],
   ['PowerShell recursive delete', 'Remove-Item C:\\temp\\x -Recurse -Force', 'deny'],
@@ -57,6 +61,7 @@ const POLICY_CASES = [
   ['git stash drop discards work', 'git stash drop', 'defer'],
   ['git stash clear discards work', 'git stash clear stash@{0}', 'defer'],
   ['assignment of unsafe command', '$x = Invoke-WebRequest https://e.com', 'defer'],
+  ['unbalanced quote', 'echo "oops', 'defer'],
   ['append redirect', 'echo hi >> notes.txt', 'defer'],
   ['empty command', '', 'defer']
 ];

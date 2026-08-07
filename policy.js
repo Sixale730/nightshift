@@ -116,10 +116,8 @@ function decide(command) {
     return { decision: 'defer', reason: 'substitution/heredoc/append-redirect' };
   }
 
-  var segments = command
-    .split(/&&|\|\||\|&|;|\||\r?\n|\s&\s|\s&$/)
-    .map(function (x) { return x.trim(); })
-    .filter(Boolean);
+  var segments = splitSegments(command);
+  if (segments === null) return { decision: 'defer', reason: 'unbalanced quotes' };
   if (segments.length === 0) return { decision: 'defer', reason: 'no segments' };
 
   for (var j = 0; j < segments.length; j++) {
@@ -131,6 +129,41 @@ function decide(command) {
   return { decision: 'allow',
            reason: 'nightshift: all ' + segments.length +
                    ' segment(s) are read-only/safe' };
+}
+
+// Quote-aware split on shell separators (&& || |& | ; newline, background &).
+// A `|` or `;` inside "..." or '...' is data, not a separator — e.g.
+// `Select-String -Pattern "warning -|issues found"` is ONE segment.
+// `&` is a separator only as `&&` or standalone (space-delimited/trailing),
+// so fd duplication like `2>&1` stays inside its segment.
+// Returns null on unbalanced quotes (caller defers — fail-safe).
+function splitSegments(command) {
+  var segs = [], cur = '', quote = null;
+  for (var i = 0; i < command.length; i++) {
+    var ch = command[i];
+    if (quote) {
+      cur += ch;
+      if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      cur += ch;
+    } else if (ch === ';' || ch === '\n' || ch === '|') {
+      segs.push(cur); cur = '';
+      var nx = command[i + 1];
+      if (ch === '|' && (nx === '|' || nx === '&')) i++;
+    } else if (ch === '&') {
+      if (command[i + 1] === '&') { segs.push(cur); cur = ''; i++; }
+      else if (/\s/.test(command[i - 1] || '') &&
+               (i + 1 === command.length || /\s/.test(command[i + 1]))) {
+        segs.push(cur); cur = '';
+      } else cur += ch; // part of a word, e.g. `2>&1`
+    } else {
+      cur += ch;
+    }
+  }
+  if (quote) return null;
+  segs.push(cur);
+  return segs.map(function (x) { return x.trim(); }).filter(Boolean);
 }
 
 function segmentSafe(seg) {
