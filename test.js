@@ -33,6 +33,9 @@ const POLICY_CASES = [
     '$lines = Get-Content x.md | Measure-Object -Line', 'allow'],
   ['PowerShell env literal assignment + npm chain',
     "$env:CI='1'; npm run build", 'allow'],
+  ['git stash typecheck round-trip',
+    'cd c:/maity && git stash -q && cd packages/shared && npx tsc --noEmit 2>&1 | grep -c "error TS"; cd c:/maity && git stash pop -q && echo "stash restored"', 'allow'],
+  ['npx whitelisted tool', 'npx vitest run --reporter=dot', 'allow'],
 
   ['hidden destructive tail', 'git status && rm -rf build', 'deny'],
   ['Set-Location + destructive tail', 'Set-Location c:\\x; Remove-Item y -Recurse', 'deny'],
@@ -51,6 +54,8 @@ const POLICY_CASES = [
   ['sensitive path (.env)', 'cat .env.local', 'defer'],
   ['command substitution', 'echo $(whoami)', 'defer'],
   ['method call on subexpression', '(Get-Item f.txt).Delete()', 'defer'],
+  ['git stash drop discards work', 'git stash drop', 'defer'],
+  ['git stash clear discards work', 'git stash clear stash@{0}', 'defer'],
   ['assignment of unsafe command', '$x = Invoke-WebRequest https://e.com', 'defer'],
   ['append redirect', 'echo hi >> notes.txt', 'defer'],
   ['empty command', '', 'defer']

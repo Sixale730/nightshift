@@ -52,7 +52,9 @@ var SUBCOMMAND_SAFE = {
   cargo: new Set(['build', 'check', 'test', 'clippy', 'fmt', 'tree']),
   go: new Set(['build', 'test', 'vet', 'version', 'env', 'list']),
   gh: new Set(['pr', 'issue', 'repo', 'run', 'api']), // release is DENIED below
-  npx: new Set([]),   // never blanket-approve npx    -> defer
+  // npx executes arbitrary packages -> never blanket-approve; only known
+  // check-only tools are whitelisted by name.
+  npx: new Set(['tsc', 'vitest']),
   docker: new Set([]) // never blanket-approve docker -> defer
 };
 
@@ -172,6 +174,12 @@ function segmentSafe(seg) {
 
   if (Object.prototype.hasOwnProperty.call(SUBCOMMAND_SAFE, cmd)) {
     var sub = (tokens[1] || '').toLowerCase();
+    // git stash is a local, recoverable write — EXCEPT drop/clear, which
+    // discard stashed work and must keep deferring to a human.
+    if (cmd === 'git' && sub === 'stash') {
+      var action = (tokens[2] || '').toLowerCase();
+      return action !== 'drop' && action !== 'clear';
+    }
     return SUBCOMMAND_SAFE[cmd].has(sub);
   }
   return false;
