@@ -34,7 +34,7 @@ var SAFE_READONLY = new Set([
   'resolve-path', 'get-item', 'get-itemproperty', 'get-date', 'get-process',
   'get-service', 'get-command', 'write-output', 'write-host',
   // dev tools safe to invoke (inline eval like -c/-e is filtered below)
-  'node', 'python', 'python3', 'py', 'pytest', 'tsc', 'flutter', 'dotnet'
+  'node', 'python', 'python3', 'py', 'pytest', 'tsc', 'flutter', 'dart', 'dotnet'
 ]);
 
 // --- Commands whose safety depends on the sub-verb (2nd token) --------------
