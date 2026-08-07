@@ -20,14 +20,17 @@
 var SAFE_READONLY = new Set([
   // POSIX read-only
   'ls', 'dir', 'cat', 'type', 'find', 'grep', 'rg', 'head', 'tail', 'wc',
-  'sort', 'uniq', 'echo', 'pwd', 'cd', 'tree', 'which', 'where', 'stat',
+  'sort', 'uniq', 'echo', 'pwd', 'cd', 'pushd', 'popd', 'tree', 'which',
+  'where', 'stat',
   'file', 'diff', 'awk', 'sed', 'cut', 'tr', 'basename', 'dirname',
   'realpath', 'readlink', 'env', 'printf', 'date', 'whoami', 'hostname',
   'du', 'df', 'less', 'more', 'column', 'jq', 'xxd', 'md5sum', 'sha256sum',
   // PowerShell read-only cmdlets (lowercased)
   'get-childitem', 'gci', 'get-content', 'gc', 'get-location', 'gl',
+  'set-location', 'sl', 'chdir', 'push-location', 'pop-location',
   'select-string', 'sls', 'measure-object', 'select-object', 'where-object',
-  'sort-object', 'format-list', 'format-table', 'out-string', 'test-path',
+  'sort-object', 'format-list', 'format-table', 'out-string', 'out-null',
+  'test-path',
   'resolve-path', 'get-item', 'get-itemproperty', 'get-date', 'get-process',
   'get-service', 'get-command', 'write-output', 'write-host',
   // dev tools safe to invoke (inline eval like -c/-e is filtered below)
@@ -132,6 +135,24 @@ function segmentSafe(seg) {
   // strip leading VAR=val assignments and benign wrappers
   var s = seg.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\S+)\s+)+/, '');
   s = s.replace(/^(?:timeout\s+\S+|nice(?:\s+-n\s+\S+)?|stdbuf\s+\S+|command|exec)\s+/, '');
+
+  // PowerShell: strip a leading `$var =` / `$env:VAR =` assignment and judge
+  // what actually executes on the right-hand side.
+  var assign = s.match(/^\$(?:env:)?[A-Za-z_]\w*\s*=\s*(.*)$/);
+  if (assign) {
+    s = assign[1].trim();
+    // assigning a bare literal executes nothing
+    if (/^(?:"[^"]*"|'[^']*'|[\w.,\\/:@#-]+)$/.test(s)) return true;
+  }
+
+  // PowerShell: subexpression `(...)` — strip leading parens so the inner
+  // command is judged, but NEVER auto-approve a method call on the result:
+  // `(Get-Content x).Lines` is a read; `(Get-Item x).Delete()` is not.
+  if (s.charAt(0) === '(') {
+    if (/\.\w+\s*\(/.test(s)) return false;
+    s = s.replace(/^[(\s]+/, '');
+  }
+
   var tokens = s.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return false;
 

@@ -1,6 +1,6 @@
 {
   "name": "nightshift",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Guardrail policy engine for AI coding agents: auto-approves provably-safe shell commands (even compound ones), hard-blocks destructive ones, defers everything else to a human. Agent-agnostic core with pluggable adapters.",
   "license": "MIT",
   "author": "Julio Alexis González Villa (https://github.com/Sixale730)",

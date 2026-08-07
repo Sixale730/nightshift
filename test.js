@@ -25,8 +25,17 @@ const POLICY_CASES = [
   ['PowerShell read-only pipe',
     'Get-ChildItem C:\\repo | Select-String TODO | Sort-Object', 'allow'],
   ['env-var prefix + wrapper', 'CI=1 timeout 60 pytest -q', 'allow'],
+  ['PowerShell Set-Location + build chain',
+    'Set-Location c:\\FEM\\app; flutter pub run build_runner build --delete-conflicting-outputs 2>&1 | Select-Object -Last 8', 'allow'],
+  ['PowerShell subexpression property read',
+    "Get-Content docs\\a.md -Tail 15; Write-Output '---'; (Get-Content docs\\a.md | Measure-Object -Line).Lines", 'allow'],
+  ['PowerShell assignment of safe pipeline',
+    '$lines = Get-Content x.md | Measure-Object -Line', 'allow'],
+  ['PowerShell env literal assignment + npm chain',
+    "$env:CI='1'; npm run build", 'allow'],
 
   ['hidden destructive tail', 'git status && rm -rf build', 'deny'],
+  ['Set-Location + destructive tail', 'Set-Location c:\\x; Remove-Item y -Recurse', 'deny'],
   ['git push in a chain', 'git commit -m "wip" && git push origin main', 'deny'],
   ['force flag', 'git checkout main --force', 'deny'],
   ['PowerShell recursive delete', 'Remove-Item C:\\temp\\x -Recurse -Force', 'deny'],
@@ -41,6 +50,8 @@ const POLICY_CASES = [
   ['inline eval (python -c)', 'python -c "print(1)"', 'defer'],
   ['sensitive path (.env)', 'cat .env.local', 'defer'],
   ['command substitution', 'echo $(whoami)', 'defer'],
+  ['method call on subexpression', '(Get-Item f.txt).Delete()', 'defer'],
+  ['assignment of unsafe command', '$x = Invoke-WebRequest https://e.com', 'defer'],
   ['append redirect', 'echo hi >> notes.txt', 'defer'],
   ['empty command', '', 'defer']
 ];
